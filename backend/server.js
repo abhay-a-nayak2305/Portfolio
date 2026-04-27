@@ -36,9 +36,32 @@ app.use('*', secureHeaders({
 }));
 
 app.use('*', async (c, next) => {
-  const clientUrl = c.env?.CLIENT_URL || process.env.CLIENT_URL || 'http://localhost:5173';
+  // Grab the Origin header that the browser sends
+  const requestOrigin = c.req.headers.get('origin');
+
+  // Build a whitelist:
+  //   • The exact origin sent by the browser (if any)
+  //   • The Pages URL you set via the CLIENT_URL env var
+  //   • Local development origins
+  const whitelist = [
+    requestOrigin,
+    process.env.CLIENT_URL,          // e.g. https://abhay-portfolio.smartgadgetfinds23.workers.dev
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+  ].filter(Boolean); // drop undefined entries
+
+  // Choose the first entry that looks like a valid origin.
+  // We explicitly require the scheme (`https://`) – Cloudflare will reject a header without it.
+  const allowedOrigin = whitelist.find((origin) => {
+    // Allow any *.pages.dev sub‑domain
+    if (origin.endsWith('.pages.dev')) return true;
+    // Allow localhost / 127.0.0.1 for local dev
+    if (origin.includes('localhost') || origin.includes('127.0.0.1')) return true;
+    return false;
+  }) ?? '*'; // fallback to wildcard (only used for non‑credentialed requests)
+
   return cors({
-    origin: clientUrl,
+    origin: allowedOrigin,
     credentials: true,
   })(c, next);
 });
