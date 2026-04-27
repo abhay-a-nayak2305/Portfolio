@@ -1,0 +1,31 @@
+node_modules/
+dist/
+build/
+.env
+.env.local
+.env.*.local
+.DS_Store
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.vscode/
+.idea/
+*.swp
+*.swo
+.cache/
+coverage/
+.nyc_output/
+
+# Dependencies
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Uploads
+uploads/
+public/uploads/
+
+# Environment
+.env.production
+.env.staging

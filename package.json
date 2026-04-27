@@ -1,0 +1,30 @@
+{
+  "name": "portfolio-website",
+  "version": "1.0.0",
+  "description": "Full Stack Developer Portfolio - MERN Stack with Tailwind CSS",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "start": "cd backend && npm start",
+    "seed": "cd backend && npm run seed",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "lint": "cd frontend && npm run lint",
+    "typecheck": "cd frontend && npx tsc --noEmit"
+  },
+  "keywords": [
+    "portfolio",
+    "mern",
+    "fullstack",
+    "react",
+    "nodejs",
+    "mongodb",
+    "tailwindcss"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
