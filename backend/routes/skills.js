@@ -1,11 +1,13 @@
-import express from 'express';
+import { Hono } from 'hono';
 import Skill from '../models/Skill.js';
-const router = express.Router();
+
+const app = new Hono();
 
 // GET all skills
-router.get('/', async (req, res) => {
+app.get('/', async (c) => {
   try {
-    const { category, featured } = req.query;
+    const category = c.req.query('category');
+    const featured = c.req.query('featured');
 
     const filter = {};
     if (category) filter.category = category;
@@ -15,14 +17,14 @@ router.get('/', async (req, res) => {
       .sort({ featured: -1, order: 1, level: -1 })
       .lean();
 
-    res.json(skills);
+    return c.json(skills);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return c.json({ message: error.message }, 500);
   }
 });
 
 // GET skills grouped by category
-router.get('/grouped', async (req, res) => {
+app.get('/grouped', async (c) => {
   try {
     const skills = await Skill.find()
       .sort({ category: 1, order: 1, level: -1 })
@@ -36,23 +38,23 @@ router.get('/grouped', async (req, res) => {
       return acc;
     }, {});
 
-    res.json(grouped);
+    return c.json(grouped);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return c.json({ message: error.message }, 500);
   }
 });
 
 // GET single skill by ID
-router.get('/:id', async (req, res) => {
+app.get('/:id', async (c) => {
   try {
-    const skill = await Skill.findById(req.params.id);
+    const skill = await Skill.findById(c.req.param('id'));
     if (!skill) {
-      return res.status(404).json({ message: 'Skill not found' });
+      return c.json({ message: 'Skill not found' }, 404);
     }
-    res.json(skill);
+    return c.json(skill);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return c.json({ message: error.message }, 500);
   }
 });
 
-export default router;
+export default app;

@@ -1,11 +1,16 @@
-import express from 'express';
+import { Hono } from 'hono';
 import Article from '../models/Article.js';
-const router = express.Router();
+
+const app = new Hono();
 
 // GET all published articles
-router.get('/', async (req, res) => {
+app.get('/', async (c) => {
   try {
-    const { page = 1, limit = 10, category, featured, tag } = req.query;
+    const page = parseInt(c.req.query('page') || '1');
+    const limit = parseInt(c.req.query('limit') || '10');
+    const category = c.req.query('category');
+    const featured = c.req.query('featured');
+    const tag = c.req.query('tag');
 
     const filter = { published: true };
 
@@ -15,57 +20,35 @@ router.get('/', async (req, res) => {
 
     const articles = await Article.find(filter)
       .sort('-publishedAt')
-      .limit(limit * 1)
+      .limit(limit)
       .skip((page - 1) * limit)
       .lean();
 
     const total = await Article.countDocuments(filter);
 
-    res.json({
+    return c.json({
       articles,
       totalPages: Math.ceil(total / limit),
       currentPage: page,
       total
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// GET single article by slug
-router.get('/:slug', async (req, res) => {
-  try {
-    const article = await Article.findOne({
-      slug: req.params.slug,
-      published: true
-    });
-
-    if (!article) {
-      return res.status(404).json({ message: 'Article not found' });
-    }
-
-    // Increment views
-    article.views += 1;
-    await article.save();
-
-    res.json(article);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    return c.json({ message: error.message }, 500);
   }
 });
 
 // GET categories
-router.get('/meta/categories', async (req, res) => {
+app.get('/meta/categories', async (c) => {
   try {
     const categories = await Article.distinct('category', { published: true });
-    res.json(categories);
+    return c.json(categories);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return c.json({ message: error.message }, 500);
   }
 });
 
 // GET tags
-router.get('/meta/tags', async (req, res) => {
+app.get('/meta/tags', async (c) => {
   try {
     const tags = await Article.aggregate([
       { $match: { published: true } },
@@ -74,10 +57,32 @@ router.get('/meta/tags', async (req, res) => {
       { $sort: { count: -1 } },
       { $limit: 20 }
     ]);
-    res.json(tags);
+    return c.json(tags);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return c.json({ message: error.message }, 500);
   }
 });
 
-export default router;
+// GET single article by slug
+app.get('/:slug', async (c) => {
+  try {
+    const article = await Article.findOne({
+      slug: c.req.param('slug'),
+      published: true
+    });
+
+    if (!article) {
+      return c.json({ message: 'Article not found' }, 404);
+    }
+
+    // Increment views
+    article.views += 1;
+    await article.save();
+
+    return c.json(article);
+  } catch (error) {
+    return c.json({ message: error.message }, 500);
+  }
+});
+
+export default app;

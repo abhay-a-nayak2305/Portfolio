@@ -1,12 +1,13 @@
-import express from 'express';
+import { Hono } from 'hono';
 import SiteVisit from '../models/SiteVisit.js';
 import { protect } from '../middleware/auth.js';
-const router = express.Router();
+
+const app = new Hono();
 
 // POST track visit
-router.post('/', async (req, res) => {
+app.post('/', async (c) => {
   try {
-    const { ip, userAgent, url, referrer, country, region, city, deviceType, sessionId } = req.body;
+    const { ip, userAgent, url, referrer, country, region, city, deviceType, sessionId } = await c.req.json();
 
     const visit = new SiteVisit({
       ip,
@@ -22,15 +23,15 @@ router.post('/', async (req, res) => {
 
     await visit.save();
 
-    res.status(201).json({ message: 'Visit tracked' });
+    return c.json({ message: 'Visit tracked' }, 201);
   } catch (error) {
     // Don't fail the request if tracking fails
-    res.status(201).json({ message: 'Visit tracked' });
+    return c.json({ message: 'Visit tracked' }, 201);
   }
 });
 
 // GET simple analytics (last 7 days)
-router.get('/stats/simple', protect, async (req, res) => {
+app.get('/stats/simple', protect, async (c) => {
   try {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
@@ -61,7 +62,7 @@ router.get('/stats/simple', protect, async (req, res) => {
       ])
     ]);
 
-    res.json({
+    return c.json({
       period: '7d',
       totalVisits,
       uniqueVisitors,
@@ -71,8 +72,8 @@ router.get('/stats/simple', protect, async (req, res) => {
       generatedAt: new Date().toISOString()
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return c.json({ message: error.message }, 500);
   }
 });
 
-export default router;
+export default app;

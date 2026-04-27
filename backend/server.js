@@ -1,11 +1,9 @@
 console.log('Server starting...');
-import express from 'express';
-import mongoose from 'mongoose';
-import cors from 'cors';
-import helmet from 'helmet';
-import compression from 'compression';
-import morgan from 'morgan';
-import dotenv from 'dotenv';
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
+import { secureHeaders } from 'hono/secure-headers';
+import { logger } from 'hono/logger';
+
 // Routes
 import projectRoutes from './routes/projects.js';
 import skillRoutes from './routes/skills.js';
@@ -15,96 +13,75 @@ import articleRoutes from './routes/articles.js';
 import authRoutes from './routes/auth.js';
 
 // Middleware
-import { apiLimiter, contactLimiter, errorHandler } from './middleware/error.js';
-import { protect } from './middleware/auth.js';
+import { errorHandler } from './middleware/error.js';
 
 // Database
 import connectDB from './config/db.js';
 
-dotenv.config();
+// In Node environment, use serve to run locally
+import { serve } from '@hono/node-server';
 
-const app = express();
-const PORT = process.env.PORT || 5000;
+const app = new Hono();
 
-// Connect to database
-connectDB();
-
-// Security middleware
-app.use(helmet({
+// Global middleware
+app.use('*', logger());
+app.use('*', secureHeaders({
   contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.tailwindcss.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      scriptSrc: ["'self'", "https://cdn.tailwindcss.com"],
-      imgSrc: ["'self'", "data:", "https:", "blob:"],
-    },
-  },
+    defaultSrc: ["'self'"],
+    styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.tailwindcss.com"],
+    fontSrc: ["'self'", "https://fonts.gstatic.com"],
+    scriptSrc: ["'self'", "https://cdn.tailwindcss.com"],
+    imgSrc: ["'self'", "data:", "https:", "blob:"],
+  }
 }));
 
-// CORS
-app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
-  credentials: true,
-}));
+app.use('*', async (c, next) => {
+  const clientUrl = c.env?.CLIENT_URL || process.env.CLIENT_URL || 'http://localhost:5173';
+  return cors({
+    origin: clientUrl,
+    credentials: true,
+  })(c, next);
+});
 
-// Compression
-app.use(compression());
-
-// Body parser
-app.use(express.json({ limit: '10mb' }));
-
-// Logging (only in dev)
-if (process.env.NODE_ENV === 'development') {
-  app.use(morgan('dev'));
-}
-
-// Rate limiting
-app.use('/api/', apiLimiter);
-app.use('/api/contact', contactLimiter);
+// Database connection per request (serverless pattern)
+app.use('*', async (c, next) => {
+  await connectDB(c.env || process.env);
+  await next();
+});
 
 // API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/projects', projectRoutes);
-app.use('/api/skills', skillRoutes);
-app.use('/api/contact', contactRoutes);
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api/articles', articleRoutes);
+app.route('/api/auth', authRoutes);
+app.route('/api/projects', projectRoutes);
+app.route('/api/skills', skillRoutes);
+app.route('/api/contact', contactRoutes);
+app.route('/api/analytics', analyticsRoutes);
+app.route('/api/articles', articleRoutes);
 
 // Health check
-app.get('/api/health', (req, res) => {
-  res.json({
+app.get('/api/health', (c) => {
+  return c.json({
     status: 'OK',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: c.env?.NODE_ENV || process.env.NODE_ENV || 'development'
   });
 });
 
-// Serve static files in production
-if (process.env.NODE_ENV === 'production') {
-  const path = await import('path');
-  app.use(express.static(path.join(process.cwd(), 'frontend/dist')));
-
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(process.cwd(), 'frontend/dist', 'index.html'));
-  });
-}
-
 // Error handling
-app.use(errorHandler);
+app.onError(errorHandler);
 
-// Start server
-const server = app.listen(PORT, () => {
+// If running in development or outside Cloudflare, start the node-server
+if (process.env.NODE_ENV !== 'production' && typeof process !== 'undefined' && process.release?.name === 'node') {
+  const PORT = process.env.PORT || 5000;
+  
   console.log(`Server running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`API: http://localhost:${PORT}/api`);
-});
+  
+  serve({
+    fetch: app.fetch,
+    port: PORT
+  });
+}
 
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (err) => {
-  console.error(err);
-  server.close(() => process.exit(1));
-});
-
+// Export for Cloudflare Workers
 export default app;

@@ -1,39 +1,28 @@
-import express from 'express';
+import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
 import Contact from '../models/Contact.js';
-import { body, validationResult } from 'express-validator';
 import { protect } from '../middleware/auth.js';
-const router = express.Router();
+
+const app = new Hono();
+
+const contactSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(100, 'Name too long'),
+  email: z.string().email('Invalid email'),
+  subject: z.string().min(1, 'Subject is required').max(200, 'Subject too long'),
+  message: z.string().min(1, 'Message is required').max(2000, 'Message too long'),
+  website: z.string().optional()
+});
 
 // POST new contact message
-router.post('/', [
-  body('name')
-    .trim()
-    .notEmpty().withMessage('Name is required')
-    .isLength({ max: 100 }).withMessage('Name too long'),
-  body('email')
-    .trim()
-    .notEmpty().withMessage('Email is required')
-    .isEmail().withMessage('Invalid email')
-    .normalizeEmail(),
-  body('subject')
-    .trim()
-    .notEmpty().withMessage('Subject is required')
-    .isLength({ max: 200 }).withMessage('Subject too long'),
-  body('message')
-    .trim()
-    .notEmpty().withMessage('Message is required')
-    .isLength({ max: 2000 }).withMessage('Message too long')
-], async (req, res) => {
+app.post('/', zValidator('json', contactSchema, (result, c) => {
+  if (!result.success) {
+    return c.json({ errors: result.error.issues.map(i => i.message) }, 400);
+  }
+}), async (c) => {
   try {
-    // Validate input
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
+    const { name, email, subject, message, website } = await c.req.json();
 
-    const { name, email, subject, message, website } = req.body;
-
-    // Check for spam (basic rate limiting - prevent same IP spamming)
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
     const recentMessages = await Contact.countDocuments({
       email,
@@ -41,27 +30,21 @@ router.post('/', [
     });
 
     if (recentMessages >= 3) {
-      return res.status(429).json({
+      return c.json({
         message: 'Too many messages from this email. Please try again later.'
-      });
+      }, 429);
     }
 
+    const ip = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'unknown';
+    const userAgent = c.req.header('User-Agent');
+
     const contact = new Contact({
-      name,
-      email,
-      subject,
-      message,
-      website,
-      ip: req.ip || req.connection.remoteAddress,
-      userAgent: req.get('User-Agent')
+      name, email, subject, message, website, ip, userAgent
     });
 
     await contact.save();
 
-    // Send email notification if configured
-    // (Implementation would go here with nodemailer)
-
-    res.status(201).json({
+    return c.json({
       message: 'Message sent successfully',
       contact: {
         id: contact._id,
@@ -70,17 +53,19 @@ router.post('/', [
         subject: contact.subject,
         createdAt: contact.createdAt
       }
-    });
+    }, 201);
   } catch (error) {
     console.error('Contact form error:', error);
-    res.status(500).json({ message: 'Failed to send message' });
+    return c.json({ message: 'Failed to send message' }, 500);
   }
 });
 
 // GET all messages (admin endpoint)
-router.get('/', protect, async (req, res) => {
+app.get('/', protect, async (c) => {
   try {
-    const { page = 1, limit = 20, unreadOnly } = req.query;
+    const page = parseInt(c.req.query('page') || '1');
+    const limit = parseInt(c.req.query('limit') || '20');
+    const unreadOnly = c.req.query('unreadOnly');
 
     const filter = {};
     if (unreadOnly === 'true') {
@@ -89,38 +74,38 @@ router.get('/', protect, async (req, res) => {
 
     const contacts = await Contact.find(filter)
       .sort('-createdAt')
-      .limit(limit * 1)
+      .limit(limit)
       .skip((page - 1) * limit)
       .lean();
 
     const total = await Contact.countDocuments(filter);
 
-    res.json({
+    return c.json({
       contacts,
       totalPages: Math.ceil(total / limit),
       currentPage: page,
       total
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return c.json({ message: error.message }, 500);
   }
 });
 
 // PATCH mark as read
-router.patch('/:id/read', protect, async (req, res) => {
+app.patch('/:id/read', protect, async (c) => {
   try {
-    const contact = await Contact.findById(req.params.id);
+    const contact = await Contact.findById(c.req.param('id'));
     if (!contact) {
-      return res.status(404).json({ message: 'Contact not found' });
+      return c.json({ message: 'Contact not found' }, 404);
     }
 
     contact.read = true;
     await contact.save();
 
-    res.json({ message: 'Marked as read', contact });
+    return c.json({ message: 'Marked as read', contact });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return c.json({ message: error.message }, 500);
   }
 });
 
-export default router;
+export default app;

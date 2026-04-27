@@ -1,18 +1,16 @@
-import express from 'express';
+import { Hono } from 'hono';
 import Project from '../models/Project.js';
-import { body, query } from 'express-validator';
-const router = express.Router();
+
+const app = new Hono();
 
 // GET all published projects
-router.get('/', async (req, res) => {
+app.get('/', async (c) => {
   try {
-    const {
-      page = 1,
-      limit = 10,
-      category,
-      featured,
-      sort = '-createdAt'
-    } = req.query;
+    const page = parseInt(c.req.query('page') || '1');
+    const limit = parseInt(c.req.query('limit') || '10');
+    const category = c.req.query('category');
+    const featured = c.req.query('featured');
+    const sort = c.req.query('sort') || '-createdAt';
 
     const filter = { isPublished: true };
 
@@ -21,67 +19,67 @@ router.get('/', async (req, res) => {
 
     const projects = await Project.find(filter)
       .sort(sort)
-      .limit(limit * 1)
+      .limit(limit)
       .skip((page - 1) * limit)
       .lean();
 
     const total = await Project.countDocuments(filter);
 
-    res.json({
+    return c.json({
       projects,
       totalPages: Math.ceil(total / limit),
       currentPage: page,
       total
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// GET single project by slug
-router.get('/:slug', async (req, res) => {
-  try {
-    const project = await Project.findOne({
-      slug: req.params.slug,
-      isPublished: true
-    });
-
-    if (!project) {
-      return res.status(404).json({ message: 'Project not found' });
-    }
-
-    // Increment views
-    project.views += 1;
-    await project.save();
-
-    res.json(project);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    return c.json({ message: error.message }, 500);
   }
 });
 
 // GET featured projects
-router.get('/featured/list', async (req, res) => {
+app.get('/featured/list', async (c) => {
   try {
     const projects = await Project.find({
       featured: true,
       isPublished: true
     }).sort('-createdAt').limit(6).lean();
 
-    res.json(projects);
+    return c.json(projects);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return c.json({ message: error.message }, 500);
   }
 });
 
 // GET project categories
-router.get('/meta/categories', async (req, res) => {
+app.get('/meta/categories', async (c) => {
   try {
     const categories = await Project.distinct('category', { isPublished: true });
-    res.json(categories);
+    return c.json(categories);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return c.json({ message: error.message }, 500);
   }
 });
 
-export default router;
+// GET single project by slug
+app.get('/:slug', async (c) => {
+  try {
+    const project = await Project.findOne({
+      slug: c.req.param('slug'),
+      isPublished: true
+    });
+
+    if (!project) {
+      return c.json({ message: 'Project not found' }, 404);
+    }
+
+    // Increment views
+    project.views += 1;
+    await project.save();
+
+    return c.json(project);
+  } catch (error) {
+    return c.json({ message: error.message }, 500);
+  }
+});
+
+export default app;

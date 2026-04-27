@@ -1,28 +1,23 @@
 import jwt from 'jsonwebtoken';
 
-export const protect = async (req, res, next) => {
+export const protect = async (c, next) => {
   let token;
+  const authHeader = c.req.header('Authorization');
 
-  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+  if (authHeader && authHeader.startsWith('Bearer')) {
     try {
-      // Get token from header
-      token = req.headers.authorization.split(' ')[1];
-
-      // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-      // Add admin info to request
-      // (Since we only have one admin for now, we just verify the token is valid)
-      req.admin = decoded;
-
-      next();
+      token = authHeader.split(' ')[1];
+      const decoded = jwt.verify(token, c.env?.JWT_SECRET || process.env.JWT_SECRET);
+      c.set('admin', decoded);
+      await next();
+      return;
     } catch (error) {
       console.error('Auth error:', error);
-      res.status(401).json({ message: 'Not authorized, token failed' });
+      return c.json({ message: 'Not authorized, token failed' }, 401);
     }
   }
 
   if (!token) {
-    res.status(401).json({ message: 'Not authorized, no token' });
+    return c.json({ message: 'Not authorized, no token' }, 401);
   }
 };

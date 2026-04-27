@@ -10,24 +10,25 @@
     "seed": "node seed.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["portfolio", "mern", "api"],
+  "keywords": [
+    "portfolio",
+    "mern",
+    "api"
+  ],
   "author": "Your Name",
   "license": "MIT",
   "dependencies": {
-    "express": "^5.2.1",
-    "mongoose": "^9.5.0",
-    "cors": "^2.8.6",
-    "dotenv": "^17.4.2",
-    "helmet": "^8.1.0",
-    "express-rate-limit": "^8.4.1",
-    "express-validator": "^7.3.2",
+    "@hono/node-server": "^2.0.0",
+    "@hono/zod-validator": "^0.7.6",
     "bcryptjs": "^3.0.3",
+    "dotenv": "^17.4.2",
+    "hono": "^4.12.15",
     "jsonwebtoken": "^9.0.3",
-    "multer": "^2.1.1",
-    "morgan": "^1.10.1",
-    "compression": "^1.8.1"
+    "mongoose": "^9.5.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "nodemon": "^3.1.14",
+    "wrangler": "^4.85.0"
   }
 }

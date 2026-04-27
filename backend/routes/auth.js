@@ -1,30 +1,28 @@
-import express from 'express';
+import { Hono } from 'hono';
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
 
-const router = express.Router();
+const app = new Hono();
 
 // @desc    Auth admin & get token
 // @route   POST /api/auth/login
 // @access  Public
-router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
+app.post('/login', async (c) => {
+  const { email, password } = await c.req.json();
 
-  const adminEmail = process.env.ADMIN_EMAIL;
-  const adminPassword = process.env.ADMIN_PASSWORD;
+  const adminEmail = c.env?.ADMIN_EMAIL || process.env.ADMIN_EMAIL;
+  const adminPassword = c.env?.ADMIN_PASSWORD || process.env.ADMIN_PASSWORD;
+  const jwtSecret = c.env?.JWT_SECRET || process.env.JWT_SECRET;
 
-  // Simple check against env variables
-  // In a real app, you'd use a database and hashed passwords
   if (email === adminEmail && password === adminPassword) {
-    res.json({
+    return c.json({
       email: adminEmail,
-      token: jwt.sign({ email: adminEmail }, process.env.JWT_SECRET, {
+      token: jwt.sign({ email: adminEmail }, jwtSecret, {
         expiresIn: '30d',
       }),
     });
   } else {
-    res.status(401).json({ message: 'Invalid email or password' });
+    return c.json({ message: 'Invalid email or password' }, 401);
   }
 });
 
-export default router;
+export default app;
