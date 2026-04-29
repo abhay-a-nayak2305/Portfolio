@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { Send, Mail, MapPin, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { contactApi } from '../../utils/api';
 
 const Contact = () => {
   const [ref, inView] = useInView({ triggerOnce: true, threshold: 0.1 });
@@ -22,8 +23,8 @@ const Contact = () => {
     {
       icon: Mail,
       title: 'Email',
-      value: 'hello@abh.dev',
-      href: 'mailto:hello@abh.dev',
+      value: 'abhaynayakfreelance@gmail.com',
+      href: 'mailto:abhaynayakfreelance@gmail.com',
     },
     {
       icon: MapPin,
@@ -59,14 +60,14 @@ const Contact = () => {
     if (!validateForm()) return;
     setIsSubmitting(true);
     try {
-      // Simulate submission (replace with actual API call)
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await contactApi.submit(formData);
       toast.success('Message sent! I\'ll get back to you soon.');
       setFormData({ name: '', email: '', subject: '', message: '', website: '' });
       setSubmitted(true);
       setTimeout(() => setSubmitted(false), 5000);
     } catch (error) {
-      toast.error('Failed to send. Please try again.');
+      console.error('Contact submit error:', error);
+      toast.error(error.response?.data?.message || 'Failed to send. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

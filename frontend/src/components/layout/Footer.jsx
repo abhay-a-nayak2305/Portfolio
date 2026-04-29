@@ -98,18 +98,6 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* Bottom Bar */}
-        <div className="border-t border-gray-800/50 py-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex flex-col md:flex-row items-center gap-2 text-sm text-[rgba(250,248,244,0.5)]">
-            <span>© {currentYear} ABHAY</span>
-            <span className="hidden md:block">•</span>
-            <span>New Delhi, India</span>
-          </div>
-          
-          <p className="text-sm text-[rgba(250,248,244,0.5)] flex items-center gap-2 font-mono">
-            Made with <Heart className="w-4 h-4 text-red-500 fill-red-500 animate-pulse" /> and React
-          </p>
-        </div>
       </div>
     </footer>
   );
