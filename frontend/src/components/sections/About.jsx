@@ -132,8 +132,8 @@ const About = () => {
               {skills.slice(0, 8).map((skill) => (
                 <span 
                   key={skill._id}
-                  className="px-4 py-2 border border-gray-200 text-ink-secondary text-xs tracking-wider uppercase
-                           hover:border-accent-terracotta hover:text-accent-terracotta transition-colors duration-300"
+                  className="px-4 py-2 border border-ink-subtle/30 text-ink-secondary text-xs tracking-wider uppercase
+                           hover:border-accent-terracotta hover:text-accent-terracotta transition-colors duration-300 bg-bg-cream/50"
                 >
                   {skill.name}
                 </span>
@@ -253,8 +253,8 @@ const About = () => {
               {[1, 2, 3, 4, 5, 6, 7, 8].map(i => <SkillSkeleton key={i} />)}
             </div>
           ) : error ? (
-            <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-300">
-              <p className="text-gray-500 mb-4 font-mono text-sm">{error}</p>
+            <div className="text-center py-12 bg-bg-cream/20 rounded-xl border border-dashed border-ink-subtle/30">
+              <p className="text-ink-muted mb-4 font-mono text-sm">{error}</p>
               <button 
                 onClick={fetchSkills}
                 className="btn-ethereal btn-ethereal-secondary scale-75"
@@ -265,47 +265,57 @@ const About = () => {
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               <AnimatePresence mode="popLayout">
-                {filteredSkills.map((skill, index) => (
-                  <motion.div
-                    key={skill._id}
-                    layout
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    transition={{ delay: index * 0.05, duration: 0.4 }}
-                    className="relative group"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-br from-accent-terracotta/5 to-accent-cerulean/5 rounded-xl opacity-0
-                                  group-hover:opacity-100 transition-opacity duration-500" />
-                    <div className="relative bg-white/60 backdrop-blur-sm border border-gray-200/50 
-                                    rounded-xl p-6 text-center transition-all duration-500
-                                    group-hover:-translate-y-2 group-hover:border-accent-terracotta/30">
-                      {skill.icon && (
-                        <span className="text-4xl mb-3 block opacity-80 group-hover:scale-110 transition-transform duration-500">
-                          {skill.icon}
+                {filteredSkills.map((skill, index) => {
+                  // Fallback icon based on category if skill.icon is missing
+                  const categoryIconMap = {
+                    frontend: <Palette className="w-8 h-8" />,
+                    backend: <Server className="w-8 h-8" />,
+                    database: <Database className="w-8 h-8" />,
+                    devops: <CloudIcon className="w-8 h-8" />,
+                    mobile: <Smartphone className="w-8 h-8" />,
+                    other: <Code className="w-8 h-8" />
+                  };
+                  
+                  return (
+                    <motion.div
+                      key={skill._id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ delay: index * 0.05, duration: 0.4 }}
+                      className="relative group"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-br from-accent-terracotta/5 to-accent-cerulean/5 rounded-xl opacity-0
+                                    group-hover:opacity-100 transition-opacity duration-500" />
+                      <div className="relative bg-bg-cream/60 backdrop-blur-sm border border-ink-subtle/20 
+                                      rounded-xl p-6 text-center transition-all duration-500
+                                      group-hover:-translate-y-2 group-hover:border-accent-terracotta/30">
+                        <span className="mb-3 block opacity-80 group-hover:scale-110 transition-transform duration-500 text-accent-terracotta flex justify-center">
+                          {skill.icon ? skill.icon : (categoryIconMap[skill.category] || <Code className="w-8 h-8" />)}
                         </span>
-                      )}
-                      <h4 className="font-display font-semibold text-ink-primary mb-2">
-                        {skill.name}
-                      </h4>
-                      <p className="text-xs font-mono text-ink-muted uppercase tracking-wider">
-                        {skill.category}
-                      </p>
-                      
-                      {/* Progress bar */}
-                      {skill.level && (
-                        <div className="mt-4 w-full bg-gray-200/50 rounded-full h-1 overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${skill.level * 10}%` }}
-                            transition={{ duration: 1, delay: 0.3 }}
-                            className="h-full rounded-full bg-gradient-warm"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
-                ))}
+                        <h4 className="font-display font-semibold text-ink-primary mb-2">
+                          {skill.name}
+                        </h4>
+                        <p className="text-xs font-mono text-ink-muted uppercase tracking-wider">
+                          {skill.category}
+                        </p>
+                        
+                        {/* Progress bar */}
+                        {skill.level && (
+                          <div className="mt-4 w-full bg-ink-subtle/20 rounded-full h-1 overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${skill.level * 10}%` }}
+                              transition={{ duration: 1, delay: 0.3 }}
+                              className="h-full rounded-full bg-gradient-warm"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </AnimatePresence>
             </div>
           )}

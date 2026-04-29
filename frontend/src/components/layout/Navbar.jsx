@@ -47,7 +47,7 @@ const Navbar = () => {
         transition={{ duration: 0.6, ease: [0.19, 1, 0.22, 1] }}
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
           scrolled 
-            ? 'bg-br-cream/90 backdrop-blur-xl shadow-soft border-b border-gray-200/50' 
+            ? 'bg-bg-cream/90 backdrop-blur-xl shadow-soft border-b border-ink-subtle/20' 
             : 'bg-transparent'
         }`}
       >
@@ -172,7 +172,7 @@ const Navbar = () => {
             animate="open"
             exit="closed"
             transition={{ duration: 0.4, ease: [0.19, 1, 0.22, 1] }}
-            className="fixed inset-y-0 right-0 w-[85vw] max-w-md bg-br-cream z-40 lg:hidden shadow-2xl"
+            className="fixed inset-y-0 right-0 w-[85vw] max-w-md bg-bg-cream z-40 lg:hidden shadow-2xl"
           >
             <div className="flex flex-col h-full">
               <div className="flex-1 flex flex-col justify-center items-center gap-8 p-8">
