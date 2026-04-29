@@ -16,7 +16,6 @@ if (typeof process !== 'undefined' && process.env && !process.env.CF_PAGES) {
 
 // Routes
 import projectRoutes from './routes/projects.js';
-import skillRoutes from './routes/skills.js';
 import contactRoutes from './routes/contact.js';
 import analyticsRoutes from './routes/analytics.js';
 import articleRoutes from './routes/articles.js';
@@ -33,44 +32,57 @@ import { serve } from '@hono/node-server';
 
 const app = new Hono();
 
-// 1. CORS - MUST BE FIRST to handle OPTIONS and ensure headers are on all responses
-app.use('*', cors({
-  origin: (origin, c) => {
-    const clientUrl = c.env?.CLIENT_URL || process.env.CLIENT_URL || 'https://abhay-portfolio.smartgadgetfinds23.workers.dev';
-    if (!origin || origin === clientUrl || origin.endsWith('.pages.dev') || origin.endsWith('.workers.dev') || origin.includes('localhost')) {
-      return origin || clientUrl;
-    }
-    return clientUrl;
-  },
-  credentials: true,
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-  exposeHeaders: ['Content-Length', 'X-Kuma-Revision'],
-  maxAge: 600,
-}));
-
-// 2. Other Global middleware
-app.use('*', logger());
-app.use('*', secureHeaders({
-  contentSecurityPolicy: {
-    defaultSrc: ["'self'"],
-    styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.tailwindcss.com"],
-    fontSrc: ["'self'", "https://fonts.gstatic.com"],
-    scriptSrc: ["'self'", "https://cdn.tailwindcss.com"],
-    imgSrc: ["'self'", "data:", "https:", "blob:"],
+// 1. Bulletproof CORS (Must be absolutely first)
+app.use('*', async (c, next) => {
+  const origin = c.req.header('origin') || '*';
+  c.header('Access-Control-Allow-Origin', origin);
+  c.header('Access-Control-Allow-Credentials', 'true');
+  c.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
+  
+  if (c.req.method === 'OPTIONS') {
+    return c.text('', 204);
   }
-}));
+  await next();
+});
 
-// Database connection middleware (serverless pattern)
+// 2. Global Cache & Logger
+app.use('*', logger());
+app.use('*', async (c, next) => {
+  await next();
+  // Cache GET requests for 5 minutes in Cloudflare/Browser
+  if (c.req.method === 'GET' && c.res.status === 200 && c.req.path.includes('/api/')) {
+    c.res.headers.set('Cache-Control', 'public, max-age=300, s-maxage=300');
+  }
+});
+// app.use('*', secureHeaders({
+//   contentSecurityPolicy: {
+//     defaultSrc: ["'self'"],
+//     styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.tailwindcss.com"],
+//     fontSrc: ["'self'", "https://fonts.gstatic.com"],
+//     scriptSrc: ["'self'", "https://cdn.tailwindcss.com"],
+//     imgSrc: ["'self'", "data:", "https:", "blob:"],
+//   }
+// }));
+
+// 4. Database connection middleware (serverless pattern)
 app.use('*', async (c, next) => {
   try {
     const db = await connectDB(c.env);
+    if (!db) throw new Error('Database connection failed');
     c.set('db', db);
     await next();
   } catch (error) {
-    console.error('Database connection failed:', error);
-    // Throw error so it's caught by app.onError which handles CORS headers correctly
-    throw error;
+    console.error('DB Middleware Error:', error.message);
+    // Directly return the error response with CORS headers if DB fails
+    const origin = c.req.header('origin') || '*';
+    return c.json({ 
+      message: 'Database connection failed. Please try again.',
+      error: error.message 
+    }, 500, {
+      'Access-Control-Allow-Origin': origin,
+      'Access-Control-Allow-Credentials': 'true'
+    });
   }
 });
 
@@ -86,7 +98,6 @@ app.get('/api/health', (c) => {
 
 // Register Routes
 app.route('/api/projects', projectRoutes);
-app.route('/api/skills', skillRoutes);
 app.route('/api/contact', contactRoutes);
 app.route('/api/analytics', analyticsRoutes);
 app.route('/api/articles', articleRoutes);

@@ -1,17 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { Code, Palette, Server, Database, Cloud as CloudIcon, Smartphone } from 'lucide-react';
-import { skillApi } from '../../utils/api';
-import ErrorBoundary from '../common/ErrorBoundary';
-import SkillSkeleton from '../common/SkillSkeleton';
+import { skillsData } from '../../data/skills';
+
 
 const About = () => {
-  const [skills, setSkills] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [activeCategory, setActiveCategory] = useState('all');
-
   const [ref, inView] = useInView({ triggerOnce: true, threshold: 0.1 });
 
   const categories = [
@@ -20,29 +15,12 @@ const About = () => {
     { id: 'backend', label: 'Backend', icon: Server },
     { id: 'database', label: 'Database', icon: Database },
     { id: 'devops', label: 'DevOps', icon: CloudIcon },
-    { id: 'mobile', label: 'Mobile', icon: Smartphone },
+    { id: 'other', label: 'Other', icon: Smartphone },
   ];
 
-  useEffect(() => {
-    fetchSkills();
-  }, []);
-
-  const fetchSkills = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await skillApi.getAll();
-      setSkills(response.data);
-    } catch (err) {
-      console.error('Failed to fetch skills:', err);
-      setError('Connection failed');
-    } finally {
-      setLoading(false);
-    }
-  };
   const filteredSkills = activeCategory === 'all'
-    ? skills
-    : skills.filter(s => s.category === activeCategory);
+    ? skillsData
+    : skillsData.filter(s => s.category === activeCategory);
 
   // Stats for display
   const stats = [
@@ -245,81 +223,61 @@ const About = () => {
                 </button>
               );
             })}
+          </div>          {/* Skills grid with staggered reveal */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <AnimatePresence mode="popLayout">
+              {filteredSkills.map((skill, index) => {
+                const categoryIconMap = {
+                  frontend: <Palette className="w-8 h-8" />,
+                  backend: <Server className="w-8 h-8" />,
+                  database: <Database className="w-8 h-8" />,
+                  devops: <CloudIcon className="w-8 h-8" />,
+                  other: <Smartphone className="w-8 h-8" />,
+                  default: <Code className="w-8 h-8" />
+                };
+                
+                return (
+                  <motion.div
+                    key={skill._id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ delay: index * 0.05, duration: 0.4 }}
+                    className="relative group"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-br from-accent-terracotta/5 to-accent-cerulean/5 rounded-xl opacity-0
+                                  group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="relative bg-bg-cream/60 backdrop-blur-sm border border-ink-subtle/20 
+                                    rounded-xl p-6 text-center transition-all duration-500
+                                    group-hover:-translate-y-2 group-hover:border-accent-terracotta/30">
+                      <span className="mb-3 block opacity-80 group-hover:scale-110 transition-transform duration-500 text-accent-terracotta flex justify-center">
+                        {categoryIconMap[skill.category] || categoryIconMap.default}
+                      </span>
+                      <h4 className="font-display font-semibold text-ink-primary mb-2">
+                        {skill.name}
+                      </h4>
+                      <p className="text-xs font-mono text-ink-muted uppercase tracking-wider">
+                        {skill.category}
+                      </p>
+                      
+                      {/* Progress bar */}
+                      {skill.level && (
+                        <div className="mt-4 w-full bg-ink-subtle/20 rounded-full h-1 overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${skill.level * 10}%` }}
+                            transition={{ duration: 1, delay: 0.3 }}
+                            className="h-full rounded-full bg-gradient-warm"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
           </div>
-
-          {/* Skills grid with staggered reveal */}
-          {loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map(i => <SkillSkeleton key={i} />)}
-            </div>
-          ) : error ? (
-            <div className="text-center py-12 bg-bg-cream/20 rounded-xl border border-dashed border-ink-subtle/30">
-              <p className="text-ink-muted mb-4 font-mono text-sm">{error}</p>
-              <button 
-                onClick={fetchSkills}
-                className="btn-ethereal btn-ethereal-secondary scale-75"
-              >
-                Retry
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              <AnimatePresence mode="popLayout">
-                {filteredSkills.map((skill, index) => {
-                  // Fallback icon based on category if skill.icon is missing
-                  const categoryIconMap = {
-                    frontend: <Palette className="w-8 h-8" />,
-                    backend: <Server className="w-8 h-8" />,
-                    database: <Database className="w-8 h-8" />,
-                    devops: <CloudIcon className="w-8 h-8" />,
-                    mobile: <Smartphone className="w-8 h-8" />,
-                    other: <Code className="w-8 h-8" />
-                  };
-                  
-                  return (
-                    <motion.div
-                      key={skill._id}
-                      layout
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
-                      transition={{ delay: index * 0.05, duration: 0.4 }}
-                      className="relative group"
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-br from-accent-terracotta/5 to-accent-cerulean/5 rounded-xl opacity-0
-                                    group-hover:opacity-100 transition-opacity duration-500" />
-                      <div className="relative bg-bg-cream/60 backdrop-blur-sm border border-ink-subtle/20 
-                                      rounded-xl p-6 text-center transition-all duration-500
-                                      group-hover:-translate-y-2 group-hover:border-accent-terracotta/30">
-                        <span className="mb-3 block opacity-80 group-hover:scale-110 transition-transform duration-500 text-accent-terracotta flex justify-center">
-                          {skill.icon ? skill.icon : (categoryIconMap[skill.category] || <Code className="w-8 h-8" />)}
-                        </span>
-                        <h4 className="font-display font-semibold text-ink-primary mb-2">
-                          {skill.name}
-                        </h4>
-                        <p className="text-xs font-mono text-ink-muted uppercase tracking-wider">
-                          {skill.category}
-                        </p>
-                        
-                        {/* Progress bar */}
-                        {skill.level && (
-                          <div className="mt-4 w-full bg-ink-subtle/20 rounded-full h-1 overflow-hidden">
-                            <motion.div
-                              initial={{ width: 0 }}
-                              animate={{ width: `${skill.level * 10}%` }}
-                              transition={{ duration: 1, delay: 0.3 }}
-                              className="h-full rounded-full bg-gradient-warm"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-            </div>
-          )}
-
         </motion.div>
       </div>
     </section>

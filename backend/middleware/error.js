@@ -26,9 +26,12 @@ export const errorHandler = (err, c) => {
   // Explicitly set CORS headers for error responses to bypass browser masking
   c.header('Access-Control-Allow-Origin', origin);
   c.header('Access-Control-Allow-Credentials', 'true');
+  c.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS,PATCH');
+  c.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,Accept');
 
   return c.json({
     message: isProd ? 'Server error' : err.message,
+    error: isProd ? undefined : err.name,
     stack: isProd ? undefined : err.stack
   }, 500);
 };
