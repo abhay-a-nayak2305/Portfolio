@@ -107,7 +107,7 @@ const About = () => {
 
             {/* Tags */}
             <div className="flex flex-wrap gap-3">
-              {skills.slice(0, 8).map((skill) => (
+              {skillsData.slice(0, 8).map((skill) => (
                 <span 
                   key={skill._id}
                   className="px-4 py-2 border border-ink-subtle/30 text-ink-secondary text-xs tracking-wider uppercase
