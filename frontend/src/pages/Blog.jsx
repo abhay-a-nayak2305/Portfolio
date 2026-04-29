@@ -23,7 +23,7 @@ const Blog = () => {
   };
 
   return (
-    <div className="py-32 bg-br-base">
+    <div className="py-32 bg-bg-base transition-colors duration-500">
       <div className="max-w-7xl mx-auto px-6 lg:px-12">
         {/* Header */}
         <motion.div
@@ -62,7 +62,7 @@ const Blog = () => {
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1, duration: 0.5 }}
-                className="group relative bg-white/60 backdrop-blur-sm border border-gray-200/50 rounded-2xl overflow-hidden
+                className="group relative bg-bg-cream/60 backdrop-blur-sm border border-ink-subtle/20 rounded-2xl overflow-hidden
                          hover:-translate-y-2 hover:border-accent-terracotta/30 transition-all duration-500"
               >
                 {article.coverImage && (
