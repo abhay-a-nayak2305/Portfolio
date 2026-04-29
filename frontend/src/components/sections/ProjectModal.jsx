@@ -32,40 +32,28 @@ const ProjectModal = ({ project, onClose }) => {
             <X className="w-5 h-5" />
           </button>
 
-          {/* Hero Image */}
-          {project.image && (
-            <div className="relative h-64 md:h-96">
-              <img
-                src={project.image}
-                alt={project.title}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-
-              {/* Overlay Content */}
-              <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
-                <span className="inline-block px-3 py-1 bg-primary-600 text-white text-sm font-medium rounded-full mb-3">
-                  {project.category.toUpperCase()}
+          {/* Header Content (No Image) */}
+          <div className="p-6 md:p-8 border-b border-gray-100 bg-gray-50">
+            <span className="inline-block px-3 py-1 bg-accent-terracotta text-white text-xs font-mono uppercase tracking-widest rounded-full mb-4">
+              {project.category || 'Project'}
+            </span>
+            <h2 className="text-4xl md:text-5xl font-display font-bold text-bg-dark mb-4">
+              {project.title}
+            </h2>
+            {project.metrics?.[0] && (
+              <div className="flex items-center gap-4 text-gray-600">
+                <span className="text-sm font-mono uppercase tracking-wider">
+                  <strong>{project.metrics[0].value}</strong> {project.metrics[0].label}
                 </span>
-                <h2 className="text-3xl md:text-4xl font-bold text-white font-heading mb-2">
-                  {project.title}
-                </h2>
-                {project.metrics?.[0] && (
-                  <div className="flex items-center gap-4 text-white/90">
-                    <span className="text-sm">
-                      <strong>{project.metrics[0].value}</strong> {project.metrics[0].label}
-                    </span>
-                  </div>
-                )}
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Content */}
           <div className="p-6 md:p-8 space-y-8">
             {/* Description */}
             <div>
-              <p className="text-lg text-gray-700 -gray-300 leading-relaxed">
+              <p className="text-lg text-gray-700 leading-relaxed">
                 {project.longDescription || project.description}
               </p>
             </div>
@@ -77,7 +65,7 @@ const ProjectModal = ({ project, onClose }) => {
                   href={project.liveUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="btn-primary inline-flex items-center gap-2"
+                  className="px-6 py-2 bg-accent-terracotta text-white rounded-lg inline-flex items-center gap-2 hover:bg-accent-terracotta/90 transition-colors"
                 >
                   <ExternalLink className="w-4 h-4" />
                   Live Demo
@@ -88,7 +76,7 @@ const ProjectModal = ({ project, onClose }) => {
                   href={project.githubUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="btn-secondary inline-flex items-center gap-2"
+                  className="px-6 py-2 border border-gray-200 text-bg-dark rounded-lg inline-flex items-center gap-2 hover:bg-gray-50 transition-colors"
                 >
                   <Github className="w-4 h-4" />
                   Source Code
@@ -99,7 +87,7 @@ const ProjectModal = ({ project, onClose }) => {
                   href={project.youtubeUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="btn-ghost inline-flex items-center gap-2"
+                  className="px-6 py-2 border border-dashed border-gray-300 text-gray-600 rounded-lg inline-flex items-center gap-2 hover:bg-gray-50 transition-colors"
                 >
                   <Play className="w-4 h-4" />
                   Watch Demo
@@ -111,15 +99,14 @@ const ProjectModal = ({ project, onClose }) => {
             {project.techStack && project.techStack.length > 0 && (
               <div>
                 <h3 className="text-xl font-bold font-heading mb-4 flex items-center gap-2">
-                  <Target className="w-5 h-5 text-primary-600" />
+                  <Target className="w-5 h-5 text-accent-terracotta" />
                   Tech Stack
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {project.techStack.map((tech, idx) => (
                     <span
                       key={idx}
-                      className="px-3 py-1.5 bg-gray-100 text-gray-700 -gray-300
-                               rounded-lg text-sm font-medium border border-gray-200
+                      className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium border border-gray-200"
                     >
                       {tech.name}
                     </span>
@@ -130,7 +117,7 @@ const ProjectModal = ({ project, onClose }) => {
 
             {/* Timeline */}
             {project.timeline && (
-              <div className="flex items-center gap-4 text-sm text-gray-600 -gray-400">
+              <div className="flex items-center gap-4 text-sm text-gray-600">
                 <Clock className="w-4 h-4" />
                 <span>
                   {formatDate(project.timeline.started)} - {formatDate(project.timeline.completed)}
@@ -154,7 +141,7 @@ const ProjectModal = ({ project, onClose }) => {
                           <span className="w-2 h-2 rounded-full bg-red-500 mt-2 flex-shrink-0" />
                           <div>
                             <h4 className="font-semibold">{challenge.title}</h4>
-                            <p className="text-sm text-gray-600 -gray-400">
+                            <p className="text-sm text-gray-600">
                               {challenge.description}
                             </p>
                           </div>
@@ -176,7 +163,7 @@ const ProjectModal = ({ project, onClose }) => {
                           <span className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0" />
                           <div>
                             <h4 className="font-semibold">{solution.title}</h4>
-                            <p className="text-sm text-gray-600 -gray-400">
+                            <p className="text-sm text-gray-600">
                               {solution.description}
                             </p>
                           </div>
@@ -188,25 +175,8 @@ const ProjectModal = ({ project, onClose }) => {
               </div>
             )}
 
-            {/* Additional Images */}
-            {project.images && project.images.length > 1 && (
-              <div>
-                <h3 className="text-lg font-bold font-heading mb-4">Screenshots</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  {project.images.slice(1).map((img, idx) => (
-                    <img
-                      key={idx}
-                      src={img}
-                      alt={`${project.title} screenshot ${idx + 2}`}
-                      className="rounded-lg border border-gray-200
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Views */}
-            <div className="text-sm text-gray-500 -gray-400 pt-4 border-t border-gray-200
+            <div className="text-sm text-gray-500 pt-4 border-t border-gray-200">
               👁 {project.views?.toLocaleString() || 0} views
             </div>
           </div>

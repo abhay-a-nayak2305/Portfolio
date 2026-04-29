@@ -1,11 +1,12 @@
 import { Hono } from 'hono';
-import Skill from '../models/Skill.js';
+import { ObjectId } from 'mongodb';
 
 const app = new Hono();
 
 // GET all skills
 app.get('/', async (c) => {
   try {
+    const db = c.get('db');
     const category = c.req.query('category');
     const featured = c.req.query('featured');
 
@@ -13,22 +14,25 @@ app.get('/', async (c) => {
     if (category) filter.category = category;
     if (featured === 'true') filter.featured = true;
 
-    const skills = await Skill.find(filter)
+    const skills = await db.collection('skills')
+      .find(filter)
       .sort({ featured: -1, order: 1, level: -1 })
-      .lean();
+      .toArray();
 
     return c.json(skills);
   } catch (error) {
-    return c.json({ message: error.message }, 500);
+    throw error;
   }
 });
 
 // GET skills grouped by category
 app.get('/grouped', async (c) => {
   try {
-    const skills = await Skill.find()
+    const db = c.get('db');
+    const skills = await db.collection('skills')
+      .find()
       .sort({ category: 1, order: 1, level: -1 })
-      .lean();
+      .toArray();
 
     const grouped = skills.reduce((acc, skill) => {
       if (!acc[skill.category]) {
@@ -40,20 +44,31 @@ app.get('/grouped', async (c) => {
 
     return c.json(grouped);
   } catch (error) {
-    return c.json({ message: error.message }, 500);
+    throw error;
   }
 });
 
 // GET single skill by ID
 app.get('/:id', async (c) => {
   try {
-    const skill = await Skill.findById(c.req.param('id'));
+    const db = c.get('db');
+    const id = c.req.param('id');
+    
+    let query = {};
+    try {
+      query = { _id: new ObjectId(id) };
+    } catch (e) {
+      // If not a valid ObjectId, try searching by name or just return 404
+      return c.json({ message: 'Invalid ID format' }, 400);
+    }
+
+    const skill = await db.collection('skills').findOne(query);
     if (!skill) {
       return c.json({ message: 'Skill not found' }, 404);
     }
     return c.json(skill);
   } catch (error) {
-    return c.json({ message: error.message }, 500);
+    throw error;
   }
 });
 

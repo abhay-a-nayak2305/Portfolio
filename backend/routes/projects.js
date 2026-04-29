@@ -1,29 +1,37 @@
 import { Hono } from 'hono';
-import Project from '../models/Project.js';
 
 const app = new Hono();
 
 // GET all published projects
 app.get('/', async (c) => {
   try {
+    const db = c.get('db');
     const page = parseInt(c.req.query('page') || '1');
     const limit = parseInt(c.req.query('limit') || '10');
     const category = c.req.query('category');
     const featured = c.req.query('featured');
-    const sort = c.req.query('sort') || '-createdAt';
+    const sortStr = c.req.query('sort') || '-createdAt';
 
     const filter = { isPublished: true };
-
     if (category) filter.category = category;
     if (featured === 'true') filter.featured = true;
 
-    const projects = await Project.find(filter)
+    // Convert Mongoose-style sort (-createdAt) to Native Driver style
+    const sort = {};
+    if (sortStr.startsWith('-')) {
+      sort[sortStr.substring(1)] = -1;
+    } else {
+      sort[sortStr] = 1;
+    }
+
+    const projects = await db.collection('projects')
+      .find(filter)
       .sort(sort)
       .limit(limit)
       .skip((page - 1) * limit)
-      .lean();
+      .toArray();
 
-    const total = await Project.countDocuments(filter);
+    const total = await db.collection('projects').countDocuments(filter);
 
     return c.json({
       projects,
@@ -32,39 +40,45 @@ app.get('/', async (c) => {
       total
     });
   } catch (error) {
-    return c.json({ message: error.message }, 500);
+    throw error;
   }
 });
 
 // GET featured projects
 app.get('/featured/list', async (c) => {
   try {
-    const projects = await Project.find({
-      featured: true,
-      isPublished: true
-    }).sort('-createdAt').limit(6).lean();
+    const db = c.get('db');
+    const projects = await db.collection('projects')
+      .find({ featured: true, isPublished: true })
+      .sort({ createdAt: -1 })
+      .limit(6)
+      .toArray();
 
     return c.json(projects);
   } catch (error) {
-    return c.json({ message: error.message }, 500);
+    throw error;
   }
 });
 
 // GET project categories
 app.get('/meta/categories', async (c) => {
   try {
-    const categories = await Project.distinct('category', { isPublished: true });
+    const db = c.get('db');
+    const categories = await db.collection('projects').distinct('category', { isPublished: true });
     return c.json(categories);
   } catch (error) {
-    return c.json({ message: error.message }, 500);
+    throw error;
   }
 });
 
 // GET single project by slug
 app.get('/:slug', async (c) => {
   try {
-    const project = await Project.findOne({
-      slug: c.req.param('slug'),
+    const db = c.get('db');
+    const slug = c.req.param('slug');
+    
+    const project = await db.collection('projects').findOne({
+      slug: slug,
       isPublished: true
     });
 
@@ -73,12 +87,14 @@ app.get('/:slug', async (c) => {
     }
 
     // Increment views
-    project.views += 1;
-    await project.save();
+    await db.collection('projects').updateOne(
+      { _id: project._id },
+      { $inc: { views: 1 } }
+    );
 
     return c.json(project);
   } catch (error) {
-    return c.json({ message: error.message }, 500);
+    throw error;
   }
 });
 

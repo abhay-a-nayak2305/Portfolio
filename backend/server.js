@@ -4,6 +4,16 @@ import { cors } from 'hono/cors';
 import { secureHeaders } from 'hono/secure-headers';
 import { logger } from 'hono/logger';
 
+// Load dotenv only in Node.js (local dev)
+if (typeof process !== 'undefined' && process.env && !process.env.CF_PAGES) {
+  try {
+    const { config } = await import('dotenv');
+    config();
+  } catch (e) {
+    // dotenv might not be available in all environments
+  }
+}
+
 // Routes
 import projectRoutes from './routes/projects.js';
 import skillRoutes from './routes/skills.js';
@@ -23,7 +33,23 @@ import { serve } from '@hono/node-server';
 
 const app = new Hono();
 
-// Global middleware
+// 1. CORS - MUST BE FIRST to handle OPTIONS and ensure headers are on all responses
+app.use('*', cors({
+  origin: (origin, c) => {
+    const clientUrl = c.env?.CLIENT_URL || process.env.CLIENT_URL || 'https://abhay-portfolio.smartgadgetfinds23.workers.dev';
+    if (!origin || origin === clientUrl || origin.endsWith('.pages.dev') || origin.endsWith('.workers.dev') || origin.includes('localhost')) {
+      return origin || clientUrl;
+    }
+    return clientUrl;
+  },
+  credentials: true,
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposeHeaders: ['Content-Length', 'X-Kuma-Revision'],
+  maxAge: 600,
+}));
+
+// 2. Other Global middleware
 app.use('*', logger());
 app.use('*', secureHeaders({
   contentSecurityPolicy: {
@@ -35,50 +61,19 @@ app.use('*', secureHeaders({
   }
 }));
 
+// Database connection middleware (serverless pattern)
 app.use('*', async (c, next) => {
-  // Grab the Origin header that the browser sends
-  const requestOrigin = c.req.headers.get('origin');
-
-  // Build a whitelist:
-  //   • The exact origin sent by the browser (if any)
-  //   • The Pages URL you set via the CLIENT_URL env var
-  //   • Local development origins
-  const whitelist = [
-    requestOrigin,
-    process.env.CLIENT_URL,          // e.g. https://abhay-portfolio.smartgadgetfinds23.workers.dev
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-  ].filter(Boolean); // drop undefined entries
-
-  // Choose the first entry that looks like a valid origin.
-  // We explicitly require the scheme (`https://`) – Cloudflare will reject a header without it.
-  const allowedOrigin = whitelist.find((origin) => {
-    // Allow any *.pages.dev sub‑domain
-    if (origin.endsWith('.pages.dev')) return true;
-    // Allow localhost / 127.0.0.1 for local dev
-    if (origin.includes('localhost') || origin.includes('127.0.0.1')) return true;
-    return false;
-  }) ?? '*'; // fallback to wildcard (only used for non‑credentialed requests)
-
-  return cors({
-    origin: allowedOrigin,
-    credentials: true,
-  })(c, next);
+  try {
+    const db = await connectDB(c.env);
+    c.set('db', db);
+    await next();
+  } catch (error) {
+    console.error('Database connection failed:', error);
+    // Throw error so it's caught by app.onError which handles CORS headers correctly
+    throw error;
+  }
 });
 
-// Database connection per request (serverless pattern)
-app.use('*', async (c, next) => {
-  await connectDB(c.env || process.env);
-  await next();
-});
-
-// API Routes
-app.route('/api/auth', authRoutes);
-app.route('/api/projects', projectRoutes);
-app.route('/api/skills', skillRoutes);
-app.route('/api/contact', contactRoutes);
-app.route('/api/analytics', analyticsRoutes);
-app.route('/api/articles', articleRoutes);
 
 // Health check
 app.get('/api/health', (c) => {
@@ -88,6 +83,14 @@ app.get('/api/health', (c) => {
     environment: c.env?.NODE_ENV || process.env.NODE_ENV || 'development'
   });
 });
+
+// Register Routes
+app.route('/api/projects', projectRoutes);
+app.route('/api/skills', skillRoutes);
+app.route('/api/contact', contactRoutes);
+app.route('/api/analytics', analyticsRoutes);
+app.route('/api/articles', articleRoutes);
+app.route('/api/auth', authRoutes);
 
 // Error handling
 app.onError(errorHandler);
@@ -108,3 +111,4 @@ if (process.env.NODE_ENV !== 'production' && typeof process !== 'undefined' && p
 
 // Export for Cloudflare Workers
 export default app;
+

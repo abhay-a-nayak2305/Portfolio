@@ -72,7 +72,7 @@ app.get('/stats/simple', protect, async (c) => {
       generatedAt: new Date().toISOString()
     });
   } catch (error) {
-    return c.json({ message: error.message }, 500);
+    throw error;
   }
 });
 

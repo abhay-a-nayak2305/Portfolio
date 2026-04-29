@@ -150,7 +150,7 @@ const ProjectsContent = () => {
                   exit={{ opacity: 0, x: -100 }}
                   className="project-card group relative border-b border-gray-800 pb-12"
                 >
-                  <div className="grid grid-cols-1 lg:grid-cols-[1fr,auto] gap-8 items-center">
+                  <div className="flex flex-col gap-8">
                     {/* Main Content */}
                     <div className="space-y-6">
                       <div className="flex items-baseline gap-6 font-mono text-sm">
@@ -171,14 +171,14 @@ const ProjectsContent = () => {
                         {project.title}
                       </h3>
 
-                      <p className="text-lg text-[rgba(250,248,244,0.6)] max-w-2xl leading-relaxed">
+                      <p className="text-lg text-[rgba(250,248,244,0.6)] max-w-4xl leading-relaxed">
                         {project.description}
                       </p>
 
                       {/* Tags */}
                       {project.tags && (
                         <div className="flex flex-wrap gap-2">
-                          {project.tags.slice(0, 5).map((tag) => (
+                          {project.tags.slice(0, 8).map((tag) => (
                             <span 
                               key={tag}
                               className="px-3 py-1 text-xs font-mono uppercase tracking-wider
@@ -219,35 +219,6 @@ const ProjectsContent = () => {
                           </a>
                         )}
                       </div>
-                    </div>
-
-                    {/* Visual Element */}
-                    <div className="relative">
-                      <motion.div
-                        whileHover={{ scale: 1.05, rotateY: 5, rotateX: -5 }}
-                        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                        className={`w-full aspect-[4/3] rounded-2xl overflow-hidden border border-gray-800
-                                  ${visualStyles[index % visualStyles.length]} 
-                                  group-hover:shadow-[0_20px_60px_rgba(196,69,54,0.2)] transition-shadow duration-500`}
-                      >
-                        {project.image ? (
-                          <img 
-                            src={project.image} 
-                            alt={project.title}
-                            className="w-full h-full object-cover opacity-80 group-hover:opacity-100
-                                     transition-opacity duration-500"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center font-display text-6xl font-bold
-                                        text-[rgba(250,248,244,0.1)]">
-                            {project.title.charAt(0)}
-                          </div>
-                        )}
-                        
-                        {/* Floating accent */}
-                        <div className="absolute -top-2 -right-2 w-16 h-16 border-2 border-accent-cerulean/30
-                                      rounded-full animate-pulse" />
-                      </motion.div>
                     </div>
                   </div>
                 </motion.article>

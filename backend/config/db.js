@@ -1,15 +1,35 @@
-import mongoose from 'mongoose';
+import { MongoClient } from 'mongodb';
+
+let client = null;
+let db = null;
 
 const connectDB = async (env) => {
-  if (mongoose.connection.readyState >= 1) {
-    return;
+  if (db) return db;
+
+  const uri = env?.MONGODB_URI || process.env.MONGODB_URI;
+
+  if (!uri || uri === 'REPLACE_WITH_YOUR_MONGODB_URI') {
+    throw new Error('MONGODB_URI is not defined');
   }
+
   try {
-    const uri = env?.MONGODB_URI || process.env.MONGODB_URI;
-    const conn = await mongoose.connect(uri);
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
+    if (!client) {
+      client = new MongoClient(uri, {
+        connectTimeoutMS: 5000,
+        serverSelectionTimeoutMS: 5000,
+      });
+      await client.connect();
+    }
+    
+    // Extract database name from URI or default to 'portfolio'
+    const dbName = uri.split('/').pop().split('?')[0] || 'portfolio';
+    db = client.db(dbName);
+    
+    console.log('MongoDB Connected via Native Driver');
+    return db;
   } catch (error) {
-    console.error(`Error: ${error.message}`);
+    console.error(`MongoDB Connection Error: ${error.message}`);
+    throw error;
   }
 };
 

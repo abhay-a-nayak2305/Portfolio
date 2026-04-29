@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import Contact from '../models/Contact.js';
 import { protect } from '../middleware/auth.js';
+import { ObjectId } from 'mongodb';
 
 const app = new Hono();
 
@@ -21,10 +21,11 @@ app.post('/', zValidator('json', contactSchema, (result, c) => {
   }
 }), async (c) => {
   try {
+    const db = c.get('db');
     const { name, email, subject, message, website } = await c.req.json();
 
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-    const recentMessages = await Contact.countDocuments({
+    const recentMessages = await db.collection('contacts').countDocuments({
       email,
       createdAt: { $gte: oneHourAgo }
     });
@@ -38,16 +39,19 @@ app.post('/', zValidator('json', contactSchema, (result, c) => {
     const ip = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'unknown';
     const userAgent = c.req.header('User-Agent');
 
-    const contact = new Contact({
-      name, email, subject, message, website, ip, userAgent
-    });
+    const contact = {
+      name, email, subject, message, website, ip, userAgent,
+      read: false,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
 
-    await contact.save();
+    const result = await db.collection('contacts').insertOne(contact);
 
     return c.json({
       message: 'Message sent successfully',
       contact: {
-        id: contact._id,
+        id: result.insertedId,
         name: contact.name,
         email: contact.email,
         subject: contact.subject,
@@ -55,14 +59,14 @@ app.post('/', zValidator('json', contactSchema, (result, c) => {
       }
     }, 201);
   } catch (error) {
-    console.error('Contact form error:', error);
-    return c.json({ message: 'Failed to send message' }, 500);
+    throw error;
   }
 });
 
 // GET all messages (admin endpoint)
 app.get('/', protect, async (c) => {
   try {
+    const db = c.get('db');
     const page = parseInt(c.req.query('page') || '1');
     const limit = parseInt(c.req.query('limit') || '20');
     const unreadOnly = c.req.query('unreadOnly');
@@ -72,13 +76,14 @@ app.get('/', protect, async (c) => {
       filter.read = false;
     }
 
-    const contacts = await Contact.find(filter)
-      .sort('-createdAt')
+    const contacts = await db.collection('contacts')
+      .find(filter)
+      .sort({ createdAt: -1 })
       .limit(limit)
       .skip((page - 1) * limit)
-      .lean();
+      .toArray();
 
-    const total = await Contact.countDocuments(filter);
+    const total = await db.collection('contacts').countDocuments(filter);
 
     return c.json({
       contacts,
@@ -94,17 +99,29 @@ app.get('/', protect, async (c) => {
 // PATCH mark as read
 app.patch('/:id/read', protect, async (c) => {
   try {
-    const contact = await Contact.findById(c.req.param('id'));
-    if (!contact) {
+    const db = c.get('db');
+    const id = c.req.param('id');
+    
+    let query = {};
+    try {
+      query = { _id: new ObjectId(id) };
+    } catch (e) {
+      return c.json({ message: 'Invalid ID format' }, 400);
+    }
+
+    const result = await db.collection('contacts').findOneAndUpdate(
+      query,
+      { $set: { read: true, updatedAt: new Date() } },
+      { returnDocument: 'after' }
+    );
+
+    if (!result) {
       return c.json({ message: 'Contact not found' }, 404);
     }
 
-    contact.read = true;
-    await contact.save();
-
-    return c.json({ message: 'Marked as read', contact });
+    return c.json({ message: 'Marked as read', contact: result });
   } catch (error) {
-    return c.json({ message: error.message }, 500);
+    throw error;
   }
 });
 

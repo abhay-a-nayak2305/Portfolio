@@ -20,7 +20,16 @@ export const errorHandler = (err, c) => {
   }
 
   const isProd = (c.env?.NODE_ENV || process.env.NODE_ENV) === 'production';
+  const clientUrl = c.env?.CLIENT_URL || 'https://abhay-portfolio.smartgadgetfinds23.workers.dev';
+  const origin = c.req.header('origin') || clientUrl;
+
+  // Explicitly set CORS headers for error responses to bypass browser masking
+  c.header('Access-Control-Allow-Origin', origin);
+  c.header('Access-Control-Allow-Credentials', 'true');
+
   return c.json({
-    message: isProd ? 'Server error' : err.message
+    message: isProd ? 'Server error' : err.message,
+    stack: isProd ? undefined : err.stack
   }, 500);
 };
+
