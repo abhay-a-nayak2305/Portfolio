@@ -91,7 +91,7 @@ const ProjectsContent = () => {
           Selected <em className="gradient-warm">projects</em>
         </h2>
         
-        <p className="font-serif text-body-lg text-[rgba(250,248,244,0.6)] max-w-xl leading-relaxed">
+        <p className="font-serif text-body-lg text-ink-secondary max-w-xl leading-relaxed">
           A curation of recent work — each piece a unique challenge, each solution hand-crafted.
         </p>
       </motion.div>
@@ -110,7 +110,7 @@ const ProjectsContent = () => {
             className={`px-5 py-2.5 text-xs font-mono tracking-widest uppercase transition-all duration-500 border ${
               filter === cat
                 ? 'bg-accent-terracotta text-white border-accent-terracotta'
-                : 'border-gray-700 text-[rgba(250,248,244,0.6)] hover:border-accent-terracotta hover:text-accent-terracotta'
+                : 'border-ink-subtle/30 text-ink-muted hover:border-accent-terracotta hover:text-accent-terracotta'
             }`}
           >
             {cat === 'all' ? 'All Projects' : cat}
@@ -124,8 +124,8 @@ const ProjectsContent = () => {
           {[1, 2, 3].map(i => <ProjectSkeleton key={i} />)}
         </div>
       ) : error ? (
-        <div className="text-center py-20 bg-gray-900/50 rounded-xl border border-gray-800">
-          <p className="text-red-400 mb-4 font-mono">Unable to load projects</p>
+        <div className="text-center py-20 bg-bg-cream/20 rounded-xl border border-dashed border-ink-subtle/30">
+          <p className="text-accent-terracotta mb-4 font-mono">Unable to load projects</p>
           <button 
             onClick={fetchProjects}
             className="btn-ethereal btn-ethereal-secondary scale-75"
@@ -134,7 +134,7 @@ const ProjectsContent = () => {
           </button>
         </div>
       ) : filteredProjects.length === 0 ? (
-        <p className="text-center text-[rgba(250,248,244,0.5)]">No projects found in this category.</p>
+        <p className="text-center text-ink-muted">No projects found in this category.</p>
       ) : (
         <motion.div
           variants={containerVariants}
@@ -157,11 +157,11 @@ const ProjectsContent = () => {
                         <span className="text-accent-terracotta text-2xl font-bold">
                           {String(index + 1).padStart(2, '0')}
                         </span>
-                        <span className="text-[rgba(250,248,244,0.4)] uppercase tracking-wider">
+                        <span className="text-ink-subtle/40 uppercase tracking-wider">
                           {project.category || 'Project'}
                         </span>
-                        <span className="text-[rgba(250,248,244,0.3)]">•</span>
-                        <span className="text-[rgba(250,248,244,0.4)]">
+                        <span className="text-ink-subtle/30">•</span>
+                        <span className="text-ink-subtle/40">
                           {new Date(project.createdAt).getFullYear()}
                         </span>
                       </div>
@@ -171,7 +171,7 @@ const ProjectsContent = () => {
                         {project.title}
                       </h3>
 
-                      <p className="text-lg text-[rgba(250,248,244,0.6)] max-w-4xl leading-relaxed">
+                      <p className="text-lg text-ink-secondary max-w-4xl leading-relaxed">
                         {project.description}
                       </p>
 
@@ -182,7 +182,7 @@ const ProjectsContent = () => {
                             <span 
                               key={tag}
                               className="px-3 py-1 text-xs font-mono uppercase tracking-wider
-                                       border border-gray-800 text-[rgba(250,248,244,0.5)] 
+                                       border border-ink-subtle/20 text-ink-muted 
                                        hover:border-accent-terracotta hover:text-accent-terracotta
                                        transition-colors duration-300"
                             >
@@ -233,7 +233,7 @@ const ProjectsContent = () => {
 const Projects = () => (
   <section 
     id="work" 
-    className="relative py-32 bg-bg-dark text-br-cream overflow-hidden"
+    className="relative py-32 bg-bg-base text-ink-primary overflow-hidden"
   >
     {/* Atmospheric background */}
     <div className="absolute inset-0 pointer-events-none opacity-30">
